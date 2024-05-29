@@ -1,0 +1,439 @@
+Parameters:
+  # bucketName:
+  #   Type: String
+  #   Default: "mys3bucket"
+  #   Description: "Enter your S3 Bucket"
+  
+  vpcCIDR:
+    Type: String
+    Default: "10.0.0.0/16"
+    Description: "Enter Your VPC CIDR"
+  
+  # subnet1CIDR:
+  #   Type: String
+  #   Default: "10.0.1.0/24"
+  #   Description: "Enter Your subnet1 CIDR"
+
+  subnet2CIDR:
+    Type: String
+    Default: "10.0.2.0/24"
+    Description: "Enter Your subnet2 CIDR"
+
+  # subnet3CIDR:
+  #   Type: String
+  #   Default: "10.0.3.0/24"
+  #   Description: "Enter Your subnet3 CIDR"
+  
+  subnet4CIDR:
+    Type: String
+    Default: "10.0.4.0/24"
+    Description: "Enter Your subnet4 CIDR"
+  
+  avzones1:
+    Type: String
+    Default: "us-east-1a"
+    Description: "Enter Your AZ1 ID"
+
+  avzones2:
+    Type: String
+    Default: "us-east-1b"
+    Description: "Enter Your AZ2 ID"
+
+  dbport:
+    Type: Number
+    Default: 3306
+    Description: "Enter Your Database Port Number" 
+
+  InstanceTypeParameter:
+    Type: String
+    Default: t2.micro
+    AllowedValues:
+      - t2.micro
+      - m1.small
+      - m1.large
+    Description: Enter t2.micro, m1.small, or m1.large. Default is t2.micro.
+  
+  EC2KeyPair:
+    Type: AWS::EC2::KeyPair::KeyName
+  
+  amiID:
+    Type: String
+    Default: "ami-0bb84b8ffd87024d8"
+    Description: "Enter Your EC2 AMI ID"
+  
+  DBInstanceID:
+    Type: String
+    Description: "Enter Your RDS Instance Name"
+  
+  DBName:
+    Type: String
+    Description: "Enter Your RDS DB Name"
+  
+  DBInstanceClass:
+    Type: String
+    Default: db.t3.micro
+    Description: "Enter Your RDS Instance Class"
+  
+  DBAllocatedStorage:
+    Default: '20'
+    Description: The size of the database (GiB)
+    Type: Number
+    MinValue: '20'
+    MaxValue: '65536'
+    ConstraintDescription: must be between 20 and 65536 GiB.
+  
+  DBEngine:
+    Type: String
+    Default: 'MySQL'
+    Description: Enter Your RDS DB Engine Type
+  
+  EngineVersion:
+    Type: String
+    Default: '8.0.33'
+    Description: Enter Your RDS DB Engine Version
+  
+  DBUsername:
+    NoEcho: 'true'
+    Description: Username for MySQL database access
+    Type: String
+    MinLength: '1'
+    MaxLength: '16'
+    AllowedPattern: '[a-zA-Z][a-zA-Z0-9]*'
+    ConstraintDescription: must begin with a letter and contain only alphanumeric characters.
+  DBPassword:
+    NoEcho: 'true'
+    Default: "MetroCLl343"
+    Description: Password MySQL database access
+    Type: String
+    MinLength: '8'
+    MaxLength: '41'
+    AllowedPattern: '[a-zA-Z0-9]*'
+    ConstraintDescription: must contain only alphanumeric characters.
+  
+  MyIamInstanceProf:
+    Type: String
+    Description: "Enter Your instance profile name"
+  
+
+  MyLaunchTemplate:
+    Type: String
+    Description: "Enter Your Launch Template Name"  
+  
+  MyApplicationLoadBalancer:
+    Type: String
+    Description: "Enter Your Load Balancer Name"
+  
+  MyTargetGrp:
+    Type: String
+    Description: "Enter Your target group"
+
+Resources:
+
+
+  # S3Bucket:
+  #   Type: 'AWS::S3::Bucket'
+  #   Properties:
+  #     BucketName: !Ref bucketName
+  #     VersioningConfiguration:
+  #       Status: Enabled
+
+  customVPC:
+    Type: AWS::EC2::VPC
+    Properties:
+      CidrBlock: !Ref vpcCIDR
+      EnableDnsSupport: 'true'
+      EnableDnsHostnames: 'true'
+      Tags:
+       - Key: stack
+         Value: production
+
+  customInternetGateway:
+    Type: AWS::EC2::InternetGateway
+    Properties:
+      Tags:
+      - Key: stack
+        Value: production
+
+  AttachGateway:
+    Type: AWS::EC2::VPCGatewayAttachment
+    Properties:
+      VpcId:
+        Ref: customVPC 
+      InternetGatewayId:
+        Ref: customInternetGateway
+  
+  PublicRouteTable:
+    Type: AWS::EC2::RouteTable
+    Properties:
+      VpcId:  
+        Ref: customVPC
+      Tags:
+      - Key: stack
+        Value: production
+
+  myRoute:
+    Type: AWS::EC2::Route
+    DependsOn: AttachGateway
+    Properties:
+       RouteTableId:
+         Ref: PublicRouteTable
+       DestinationCidrBlock: 0.0.0.0/0
+       GatewayId:
+         Ref: customInternetGateway
+
+  # PrivSub1:
+  #   Type: AWS::EC2::Subnet
+  #   Properties:
+  #     VpcId:
+  #       Ref: customVPC
+  #     CidrBlock: !Ref subnet1CIDR
+  #     AvailabilityZone: !Ref avzones1
+  #     Tags:
+  #     - Key: stack
+  #       Value: production
+
+  
+  PblicSub1:
+    Type: AWS::EC2::Subnet
+    Properties:
+      VpcId:
+        Ref: customVPC
+      CidrBlock: !Ref subnet2CIDR
+      AvailabilityZone: !Ref avzones1
+      MapPublicIpOnLaunch: true
+      Tags:
+      - Key: stack
+        Value: production
+
+  # PrivSub2:
+  #   Type: AWS::EC2::Subnet
+  #   Properties:
+  #     VpcId:
+  #       Ref: customVPC
+  #     CidrBlock: !Ref subnet3CIDR
+  #     AvailabilityZone: !Ref avzones2
+  #     Tags:
+  #     - Key: stack
+  #       Value: production
+
+  PblicSub2:
+    Type: AWS::EC2::Subnet
+    Properties:
+      VpcId:
+        Ref: customVPC
+      CidrBlock: !Ref subnet4CIDR
+      AvailabilityZone: !Ref avzones2
+      MapPublicIpOnLaunch: true
+      Tags:
+      - Key: stack
+        Value: production
+
+  PublicSubnet1RouteTableAssociation:
+    Type: AWS::EC2::SubnetRouteTableAssociation
+    Properties:
+      SubnetId:
+        Ref: PblicSub1
+      RouteTableId:
+        Ref: PublicRouteTable
+
+  PublicSubnet2RouteTableAssociation:
+    Type: AWS::EC2::SubnetRouteTableAssociation
+    Properties:
+      SubnetId:
+        Ref: PblicSub2
+      RouteTableId:
+        Ref: PublicRouteTable
+
+
+  
+  InstanceSecurityGroup:
+    Type: AWS::EC2::SecurityGroup
+    Properties:
+      GroupDescription: Allow http to client host
+      VpcId: !Ref customVPC
+      SecurityGroupIngress:
+        - IpProtocol: tcp
+          FromPort: 80
+          ToPort: 80
+          CidrIp: 0.0.0.0/0
+        - IpProtocol: tcp
+          FromPort: 22
+          ToPort: 22
+          CidrIp: 0.0.0.0/0
+        - IpProtocol: tcp
+          FromPort: 443
+          ToPort: 443
+          CidrIp: 0.0.0.0/0
+      SecurityGroupEgress:
+        - IpProtocol: "-1"
+          CidrIp: 0.0.0.0/0
+
+
+  RDSSecurityGroup:
+    Type: AWS::EC2::SecurityGroup
+    Properties:
+      GroupDescription: Allow Mysql to client host
+      VpcId: !Ref customVPC
+      SecurityGroupIngress:
+        - IpProtocol: tcp
+          FromPort: !Ref dbport
+          ToPort: !Ref dbport
+          CidrIp: 0.0.0.0/0
+      SecurityGroupEgress:
+        - IpProtocol: "-1"
+          CidrIp: 0.0.0.0/0
+
+  # MyEC2Instance: 
+  #   Type: AWS::EC2::Instance
+  #   Properties: 
+  #     ImageId: !Ref amiID
+  #     KeyName: !Ref EC2KeyPair
+  #     InstanceType: !Ref InstanceTypeParameter
+  #     SecurityGroupIds: 
+  #       - !Ref InstanceSecurityGroup
+  #     SubnetId: !Ref PblicSub1
+  
+  # MyEC2Instance2: 
+  #   Type: AWS::EC2::Instance
+  #   Properties: 
+  #     ImageId: !Ref amiID
+  #     KeyName: !Ref EC2KeyPair
+  #     InstanceType: !Ref InstanceTypeParameter
+  #     SecurityGroupIds: 
+  #       - !Ref InstanceSecurityGroup
+  #     SubnetId: !Ref PblicSub2
+      
+  DBSubnetGroup: 
+    Type: "AWS::RDS::DBSubnetGroup"
+    Properties: 
+      DBSubnetGroupDescription: CustomSubnetGroup
+      SubnetIds: 
+        - !Ref PblicSub1
+        - !Ref PblicSub2
+  
+  rdsDBInstance:
+    Type: 'AWS::RDS::DBInstance'
+    Properties:
+      DBInstanceIdentifier: !Ref DBInstanceID
+      DBName: !Ref DBName
+      DBInstanceClass: !Ref DBInstanceClass
+      AllocatedStorage: !Ref DBAllocatedStorage
+      Engine: !Ref DBEngine
+      EngineVersion: "8.0.33"
+      MasterUsername: !Ref DBUsername
+      MasterUserPassword: !Ref DBPassword
+      VPCSecurityGroups: 
+        - !Ref RDSSecurityGroup
+      DBSubnetGroupName: !Ref DBSubnetGroup
+
+  RootRole: 
+    Type: "AWS::IAM::Role"
+    Properties: 
+      AssumeRolePolicyDocument: 
+        Version: "2012-10-17"
+        Statement: 
+          - Effect: "Allow"
+            Principal: 
+              Service: 
+                - "ec2.amazonaws.com"
+            Action: 
+              - "sts:AssumeRole"
+      Path: "/"
+  RolePolicies: 
+    Type: "AWS::IAM::Policy"
+    Properties: 
+      PolicyName: "root"
+      PolicyDocument: 
+        Version: "2012-10-17"
+        Statement: 
+          - Effect: "Allow"
+            Action: "*"
+            Resource: "*"
+      Roles: 
+        - Ref: "RootRole"
+  
+  LaunchTemplate:
+    Type: AWS::EC2::LaunchTemplate
+    Properties:
+      LaunchTemplateName: !Ref MyLaunchTemplate
+      LaunchTemplateData:
+        ImageId: !Ref amiID
+        InstanceType: !Ref InstanceTypeParameter
+        KeyName: !Ref EC2KeyPair
+        SecurityGroupIds:
+          - !Ref InstanceSecurityGroup
+
+  
+  AutoScalingGroup:
+    Type: AWS::AutoScaling::AutoScalingGroup
+    Properties:
+      LaunchTemplate:
+        LaunchTemplateName: !Ref MyLaunchTemplate
+        Version: !GetAtt LaunchTemplate.LatestVersionNumber
+      MinSize: 2
+      MaxSize: 4
+      DesiredCapacity: 2
+      VPCZoneIdentifier:
+        - !Ref PblicSub1
+        - !Ref PblicSub2
+  
+
+  ApplicationLoadBalancer:
+    Type: AWS::ElasticLoadBalancingV2::LoadBalancer
+    Properties:
+      Name: !Ref MyApplicationLoadBalancer
+      Subnets:
+        - !Ref PblicSub1
+        - !Ref PblicSub2
+      SecurityGroups:
+        - !Ref LoadBalancerSecurityGroup
+      Scheme: internet-facing
+      LoadBalancerAttributes:
+        - Key: idle_timeout.timeout_seconds
+          Value: '60'  
+
+  LoadBalancerSecurityGroup:
+    Type: AWS::EC2::SecurityGroup
+    Properties:
+      GroupDescription: Allow traffic to the load balancer
+      VpcId: !Ref customVPC
+      SecurityGroupIngress:
+        - IpProtocol: tcp
+          FromPort: 80
+          ToPort: 80
+          CidrIp: 0.0.0.0/0  
+        - IpProtocol: tcp
+          FromPort: 443
+          ToPort: 443
+          CidrIp: 0.0.0.0/0  
+      SecurityGroupEgress:
+        - IpProtocol: '-1'
+          CidrIp: 0.0.0.0/0  
+
+  
+  MyTargetGroup:
+    Type: AWS::ElasticLoadBalancingV2::TargetGroup
+    Properties:
+      Name: !Ref MyTargetGrp
+      Protocol: HTTP
+      Port: 80
+      VpcId: !Ref customVPC
+      TargetType: instance
+      HealthCheckPath: /healthcheck  
+      HealthCheckIntervalSeconds: 30  
+      HealthCheckTimeoutSeconds: 10   
+      HealthCheckProtocol: HTTP
+      HealthyThresholdCount: 2
+      UnhealthyThresholdCount: 2
+
+  
+  MyListener:
+    Type: AWS::ElasticLoadBalancingV2::Listener
+    Properties:
+      DefaultActions:
+        - Type: forward
+          TargetGroupArn: !Ref MyTargetGroup
+      LoadBalancerArn: !Ref ApplicationLoadBalancer
+      Port: 80
+      Protocol: HTTP
+
